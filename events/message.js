@@ -23,6 +23,6 @@ module.exports = {
                 if ((blacklisted.includes(message.channel.id)) && (message.member.roles.cache.find(r => r.id === '853161224355053598') == null)) return
                 command.run(client, message, args, config);
             } catch(err){
-                console.log(err.stack)
+                message.channel.send(err.stack)
             }
         }}
