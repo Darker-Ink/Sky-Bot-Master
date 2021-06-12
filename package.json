@@ -1,0 +1,27 @@
+{
+  "name": "sky-bot-master",
+  "version": "1.0.0",
+  "description": "This is for my discord bot support server",
+  "main": "src/index.js",
+  "dependencies": {
+    "discord.js": "^12.5.3",
+    "fs": "0.0.1-security"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Darker-Ink/Sky-Bot-Master.git"
+  },
+  "keywords": [
+    "support-bot"
+  ],
+  "author": "DarkerInk#1750",
+  "license": "BSD-3-Clause",
+  "bugs": {
+    "url": "https://github.com/Darker-Ink/Sky-Bot-Master/issues"
+  },
+  "homepage": "https://github.com/Darker-Ink/Sky-Bot-Master#readme"
+}
