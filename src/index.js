@@ -3,14 +3,16 @@ global.discord = require('discord.js');
 const Util = require("discord.js")
 const config = require('./config.json')
 //
-const client = new Discord.Client()
+global.client = new Discord.Client()
 const event_handler = require('./event');
 const fs = require("fs");
 require("dotenv").config();
 
 client.commands = new Discord.Collection();
 client.aliases = new Discord.Collection();
-
+const db = require('quick.db')
+global.nodeStatus = new db.table("nodeStatus");
+require('./botchecker')
 //Command Handler
 function getDirectories() {
     return fs.readdirSync("./commands").filter(function subFolders(file) {
@@ -18,7 +20,7 @@ function getDirectories() {
     });
 }
 const commandFiles = fs
-    .readdirSync("./commands/")
+    .readdirSync("./commands")
     .filter((file) => file.endsWith(".js"));
 for (const folder of getDirectories()) {
     const folderFiles = fs
@@ -57,6 +59,7 @@ client.on("channelDelete", function(channel){
 
 client.on("channelUpdate", function(oldChannel, newChannel){
     if (oldChannel.name.includes("-ticket")) return
+    if(oldChannel.id == '849427878914424852') return
     if(oldChannel.topic != newChannel.topic){
         const oldtopic = oldChannel.topic;
         const newtopic = newChannel.topic;
@@ -151,14 +154,31 @@ client.on("roleDelete", function(role){
     logs.send(`A role has been deleted ${role.name}`);
 });
 
-client.on("roleUpdate", function(oldRole, newRole){
-    const embed = new Discord.MessageEmbed()
-    console.log(oldRole.permissions)
-    console.log('\n\n' + newRole.permissions)
-    logs.send(`A role has been updated`);
-});
+client.on('roleUpdate', async (oldRole, newRole) => {
+    try {
+    let oldperms = oldRole.permissions.toArray().map(e => {
+        const words = e.split("_").map(x => x[0] + x.slice(1).toLowerCase());
+        return words.join(" ");
+    }).join(", ");
 
-
+    let newperms = newRole.permissions.toArray().map(e => {
+        const words = e.split("_").map(x => x[0] + x.slice(1).toLowerCase());
+        return words.join(" ");
+    }).join(", ");
+    if(oldRole.hexColor != newRole.hexColor) return logs.send('The hex has changed')
+    if(oldRole.name != newRole.name) return logs.send('The name has changed')
+    if(oldperms != newperms){
+        if(oldperms.includes('Administrator')) oldperms = 'Administrator'
+        if(newperms.includes('Administrator')) newperms = 'Administrator'
+    let embed = new Discord.MessageEmbed()
+        .setTitle(`${newRole.name} Has Been Updated`)
+        .setDescription(`Old Permissions: ${oldperms || null}\n\nNew Permissions: ${newperms || null}`)
+        .setColor('RANDOM')
+       return logs.send(embed)
+    }
+} catch(err) {
+    console.log('There was a error ' + err.stack)
+}})
 client.on("guildMemberUpdate", (oldMember, newMember) => {
     const addedRoles = newMember.roles.cache.filter(r => !oldMember.roles.cache.has(r.id));
     const removedRoles = oldMember.roles.cache.filter(r => !newMember.roles.cache.has(r.id));
@@ -191,15 +211,16 @@ client.on("guildMemberUpdate", (oldMember, newMember) => {
 })
 
 client.on("messageReactionAdd", (reaction, user) => {
+    const chalk = require('chalk')
     if(user.bot) return
-    let category = reaction.message.guild.channels.cache.find(c => c.id === "850558312952889374" && c.type === "category");
+    let category = reaction.message.guild.channels.cache.find(c => c.id === "853819788857573416" && c.type === "category");
     if (!category) return reaction.message.reply('Please contact a Admin, The category **DarkerInk** Set doesn\'t exist and This is a problem')
-    if(reaction.emoji.name == "✅" && reaction.message.id == '851713926903103499') {
-        if (reaction.message.guild.channels.cache.find(channel => channel.name === `${user.username.toLowerCase()}${user.discriminator}-ptsup-ticket`)) return reaction.message.channel.send('You already have a ticket open').then(m => client.setTimeout(() => { if(!m.deleted) m.delete() }, 10000)) && reaction.users.remove(user)
-        if (reaction.message.guild.channels.cache.find(channel => channel.name === `${user.username.toLowerCase()}${user.discriminator}-dcsup-ticket`)) return reaction.message.channel.send('You already have a ticket open').then(m => client.setTimeout(() => { if(!m.deleted) m.delete() }, 10000)) && reaction.users.remove(user)
-        if (reaction.message.guild.channels.cache.find(channel => channel.name === `${user.username.toLowerCase()}${user.discriminator}-otsup-ticket`)) return reaction.message.channel.send('You already have a ticket open').then(m => client.setTimeout(() => { if(!m.deleted) m.delete() }, 10000)) && reaction.users.remove(user)
+    if(reaction.emoji.name == "✅" && reaction.message.id == '853817786195509249') {
+        if (reaction.message.guild.channels.cache.find(channel => channel.name === `${user.username.toLowerCase()}${user.discriminator}-ticket`)) return reaction.message.channel.send('You already have a ticket open').then(m => client.setTimeout(() => { if(!m.deleted) m.delete() }, 10000)) && reaction.users.remove(user)
+        if (reaction.message.guild.channels.cache.find(channel => channel.name === `${user.username.toLowerCase()}${user.discriminator}-ticket`)) return reaction.message.channel.send('You already have a ticket open').then(m => client.setTimeout(() => { if(!m.deleted) m.delete() }, 10000)) && reaction.users.remove(user)
+        if (reaction.message.guild.channels.cache.find(channel => channel.name === `${user.username.toLowerCase()}${user.discriminator}-ticket`)) return reaction.message.channel.send('You already have a ticket open').then(m => client.setTimeout(() => { if(!m.deleted) m.delete() }, 10000)) && reaction.users.remove(user)
 
-        return reaction.message.guild.channels.create(`${user.tag}-dcsup-ticket`, {
+        return reaction.message.guild.channels.create(`${user.tag}-ticket`, {
             parent: category,
         }).then(c => {
             c.updateOverwrite(user, {
@@ -210,22 +231,23 @@ client.on("messageReactionAdd", (reaction, user) => {
             });
             const embed = new Discord.MessageEmbed()
         .setTitle('Thank you for contacting support!')
-        .setDescription(`Hello, ${user} and thanks for contacting support!\n\nYou reacted with ✅ meaning you need support releated to Discord support\n\nPress 🔐 To close the ticket`)
+        .setDescription(`Hello, ${user} and thanks for contacting support!\n\nIt seems like you have to report someone, A staff member will be here shortly\n\nPress 🔐 To close the ticket`)
         .setTimestamp()
         .setFooter(`${user.id}`)
         .setColor('GREEN')
-        c.send(`${user}, This Is your ticket\n\n<@&847600288926924831> New ticket!`, embed)
+        c.send(`${user}, This Is your ticket`, embed)
         .then(m => m.react('🔐'))
             reaction.users.remove(user);
-            reaction.message.channel.send(`<@${user.id}>, You chose Discord Support Please check <#${c.id}> for your ticket`).then(m => client.setTimeout(() => { if(!m.deleted) m.delete() }, 10000))
+            reaction.message.channel.send(`<@${user.id}>, Seems Like you need to report someone, Please check <#${c.id}> for your ticket`).then(m => client.setTimeout(() => { if(!m.deleted) m.delete() }, 10000))
         })
     }
-    if(reaction.emoji.name == "🌎" && reaction.message.id == '851713926903103499') {
-        if (reaction.message.guild.channels.cache.find(channel => channel.name === `${user.username.toLowerCase()}${user.discriminator}-ptsup-ticket`)) return reaction.message.channel.send('You already have a ticket open').then(m => client.setTimeout(() => { if(!m.deleted) m.delete() }, 10000)) && reaction.users.remove(user)
-        if (reaction.message.guild.channels.cache.find(channel => channel.name === `${user.username.toLowerCase()}${user.discriminator}-dcsup-ticket`)) return reaction.message.channel.send('You already have a ticket open').then(m => client.setTimeout(() => { if(!m.deleted) m.delete() }, 10000)) && reaction.users.remove(user)
-        if (reaction.message.guild.channels.cache.find(channel => channel.name === `${user.username.toLowerCase()}${user.discriminator}-otsup-ticket`)) return reaction.message.channel.send('You already have a ticket open').then(m => client.setTimeout(() => { if(!m.deleted) m.delete() }, 10000)) && reaction.users.remove(user)
+    //red sky maybe.....
+    if(reaction.emoji.id == "849844404235927613" && reaction.message.id == '853817786195509249') {
+        if (reaction.message.guild.channels.cache.find(channel => channel.name === `${user.username.toLowerCase()}${user.discriminator}-ticket`)) return reaction.message.channel.send('You already have a ticket open').then(m => client.setTimeout(() => { if(!m.deleted) m.delete() }, 10000)) && reaction.users.remove(user)
+        if (reaction.message.guild.channels.cache.find(channel => channel.name === `${user.username.toLowerCase()}${user.discriminator}-ticket`)) return reaction.message.channel.send('You already have a ticket open').then(m => client.setTimeout(() => { if(!m.deleted) m.delete() }, 10000)) && reaction.users.remove(user)
+        if (reaction.message.guild.channels.cache.find(channel => channel.name === `${user.username.toLowerCase()}${user.discriminator}-ticket`)) return reaction.message.channel.send('You already have a ticket open').then(m => client.setTimeout(() => { if(!m.deleted) m.delete() }, 10000)) && reaction.users.remove(user)
 
-        return reaction.message.guild.channels.create(`${user.tag}-ptsup-ticket`, {
+        return reaction.message.guild.channels.create(`${user.tag}-ticket`, {
             parent: category,
         }).then(c => {
             c.updateOverwrite(user, {
@@ -236,21 +258,21 @@ client.on("messageReactionAdd", (reaction, user) => {
             });
             const embed = new Discord.MessageEmbed()
         .setTitle('Thank you for contacting support!')
-        .setDescription(`Hello, ${user} and thanks for contacting support!\n\nYou reacted with 🌎 meaning you need support releated to Pterodactyl support\n\nPress 🔐 To close the ticket`)
+        .setDescription(`Hello, ${user} and thanks for contacting support!\n\nSeems Like you need help with Red sky.. Or maybe just got to report something, anyway a staff member will be here shortly\n\nPress 🔐 To close the ticket`)
         .setTimestamp()
         .setFooter(`${user.id}`)
         .setColor('GREEN')
-        c.send(`${user}, This Is your ticket\n\n<@&847600288926924831> New ticket!`, embed)
+        c.send(`${user}, This Is your ticket`, embed)
         .then(m => m.react('🔐'))
             reaction.users.remove(user);
-            reaction.message.channel.send(`<@${user.id}>, You chose Pterodactyl support Please check <#${c.id}> for your ticket`).then(m => client.setTimeout(() => { if(!m.deleted) m.delete() }, 10000))
+            reaction.message.channel.send(`<@${user.id}>, Seems like you need help with Red Sky, Please check <#${c.id}> for your ticket`).then(m => client.setTimeout(() => { if(!m.deleted) m.delete() }, 10000))
         })
     }
-    if(reaction.emoji.name == "🛒" && reaction.message.id == '851713926903103499') {
-        if (reaction.message.guild.channels.cache.find(channel => channel.name === `${user.username.toLowerCase()}${user.discriminator}-ptsup-ticket`)) return reaction.message.channel.send('You already have a ticket open').then(m => client.setTimeout(() => { if(!m.deleted) m.delete() }, 10000)) && reaction.users.remove(user)
-        if (reaction.message.guild.channels.cache.find(channel => channel.name === `${user.username.toLowerCase()}${user.discriminator}-dcsup-ticket`)) return reaction.message.channel.send('You already have a ticket open').then(m => client.setTimeout(() => { if(!m.deleted) m.delete() }, 10000)) && reaction.users.remove(user)
-        if (reaction.message.guild.channels.cache.find(channel => channel.name === `${user.username.toLowerCase()}${user.discriminator}-otsup-ticket`)) return reaction.message.channel.send('You already have a ticket open').then(m => client.setTimeout(() => { if(!m.deleted) m.delete() }, 10000)) && reaction.users.remove(user)
-        return reaction.message.guild.channels.create(`${user.tag}-otsup-ticket`, {
+    if(reaction.emoji.id == "853817178687143956" && reaction.message.id == '853817786195509249') {
+        if (reaction.message.guild.channels.cache.find(channel => channel.name === `${user.username.toLowerCase()}${user.discriminator}-ticket`)) return reaction.message.channel.send('You already have a ticket open').then(m => client.setTimeout(() => { if(!m.deleted) m.delete() }, 10000)) && reaction.users.remove(user)
+        if (reaction.message.guild.channels.cache.find(channel => channel.name === `${user.username.toLowerCase()}${user.discriminator}-ticket`)) return reaction.message.channel.send('You already have a ticket open').then(m => client.setTimeout(() => { if(!m.deleted) m.delete() }, 10000)) && reaction.users.remove(user)
+        if (reaction.message.guild.channels.cache.find(channel => channel.name === `${user.username.toLowerCase()}${user.discriminator}-ticket`)) return reaction.message.channel.send('You already have a ticket open').then(m => client.setTimeout(() => { if(!m.deleted) m.delete() }, 10000)) && reaction.users.remove(user)
+        return reaction.message.guild.channels.create(`${user.tag}-ticket`, {
             parent: category,
         }).then(c => {
             c.updateOverwrite(user, {
@@ -261,14 +283,14 @@ client.on("messageReactionAdd", (reaction, user) => {
             });
             const embed = new Discord.MessageEmbed()
         .setTitle('Thank you for contacting support!')
-        .setDescription(`Hello, ${user} and thanks for contacting support!\n\nYou reacted with 🛒 meaning you need support releated to Other Support\n\nPress 🔐 To close the ticket`)
+        .setDescription(`Hello, ${user} and thanks for contacting support!\n\nnSeems Like you need help with Blue sky.. Or maybe just got to report something, anyway a staff member will be here shortly\n\nPress 🔐 To close the ticket`)
         .setTimestamp()
         .setFooter(`${user.id}`)
         .setColor('GREEN')
-        c.send(`${user}, This Is your ticket\n\n<@&847600288926924831> New ticket!`, embed)
+        c.send(`${user}, This Is your ticket`, embed)
         .then(m => m.react('🔐'))
             reaction.users.remove(user);
-            reaction.message.channel.send(`<@${user.id}>, You chose Other Support Please check <#${c.id}> for your ticket`).then(m => client.setTimeout(() => { if(!m.deleted) m.delete() }, 10000))
+            reaction.message.channel.send(`<@${user.id}>, Seems like you need help with Blue Sky Please check <#${c.id}> for your ticket`).then(m => client.setTimeout(() => { if(!m.deleted) m.delete() }, 10000))
         })
     }
 });
@@ -288,18 +310,6 @@ client.on("messageReactionAdd", async (reaction, user) => {
     }
 })
 
-client.on("messageReactionRemove", async (reaction, user) => {
-    if(user.bot) return
-    if(reaction.emoji.name == "✅" && reaction.message.id == '851941760469041192') {
-        const member = await reaction.message.guild.members.fetch(user)
-        if (!member.roles.cache.some(role => role.id === '847600288926924831')) {
-            return reaction.message.channel.send('You are already off duty :/').then(m => client.setTimeout(() => { if(!m.deleted) m.delete() }, 5000))
-            }
-        member.roles.remove('847600288926924831')
-        reaction.message.channel.send(`${user}` + ' ' + 'Hey, It seems like you aren\'t on Duty anymore, Have a good rest of your day').then(m => client.setTimeout(() => { if(!m.deleted) m.delete() }, 5000))
-    }
-})
-
 client.on("messageReactionAdd", async (reaction, user) => {
     if(user.bot) return
     if(!reaction.message.channel.name.includes('-ticket')) return
@@ -308,4 +318,47 @@ client.on("messageReactionAdd", async (reaction, user) => {
             reaction.message.channel.delete()
     }, 5000))
     }
+})
+
+//🤖 📜 📢 🔔
+client.on("messageReactionAdd", async (reaction, user) => {
+    if(user.bot) return
+    reaction.users.remove(user)
+    const member = await reaction.message.guild.members.fetch(user)
+    //Start Of Ping reaction
+    if (member.roles.cache.some(role => role.id === '853182789918785556')) {
+        member.roles.remove('853178948639916042')
+        return reaction.message.channel.send('[DEBUG] User already has role and its been removed now')
+        }
+        if(reaction.emoji.name == "🔔" && reaction.message.id == '853182789918785556') {
+            member.roles.add('853178948639916042')
+            return reaction.message.channel.send('[DEBUG] User has gotten the role')
+        }
+        //End Of ping reaction && Start of Bot update reaction
+        if(reaction.emoji.name == "🤖" && reaction.message.id == '853182789918785556') {
+            if (member.roles.cache.some(role => role.id === '853178823615709194')) {
+                member.roles.remove('853178823615709194')
+                return reaction.message.channel.send('[DEBUG] User already has role and its been removed now')
+                }
+            member.roles.add('853178823615709194')
+            return reaction.message.channel.send('[DEBUG] User has gotten the role')
+        }
+        //End Of Bot update reaction && Start of change logs reaction
+        if(reaction.emoji.name == "📢" && reaction.message.id == '853182789918785556') {
+            if (member.roles.cache.some(role => role.id === '853178919057752094')) {
+                member.roles.remove('853178919057752094')
+                return reaction.message.channel.send('[DEBUG] User already has role and its been removed now')
+                }
+            member.roles.add('853178919057752094')
+            return reaction.message.channel.send('[DEBUG] User has gotten the role')
+        }
+        //End Of change logs reaction && Start of Beta Updates reaction
+        if(reaction.emoji.name == "📜" && reaction.message.id == '853182789918785556') {
+            if (member.roles.cache.some(role => role.id === '853178846157602837')) {
+                member.roles.remove('853178846157602837')
+                return reaction.message.channel.send('[DEBUG] User already has role and its been removed now')
+                }
+            member.roles.add('853178846157602837')
+            return reaction.message.channel.send('[DEBUG] User has gotten the role')
+        }
 })
