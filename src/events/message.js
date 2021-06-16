@@ -5,7 +5,7 @@ module.exports = {
         const config = require('../config.json')
         if (!message.content.startsWith(prefix)) return;
 
-            if (!message.member) message.member = await message.guild.fetchMember(message);
+            //if (!message.member) message.member = await message.guild.fetchMember(message);
             const args = message.content.slice(prefix.length).trim().split(/ +/g);
             const cmd = args.shift().toLowerCase();
             if (cmd.length === 0) return;

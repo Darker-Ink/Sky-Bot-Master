@@ -3,14 +3,14 @@ const transliterate = require('transliteration');
     let guild = newV.guild;
 
     if(oldV.channelID === newV.channelID) return;
-    if (oldV.channelID != null && oldV.channelID != "853932441684803604" && oldV.channel.parentID === "853932245482733598") {
+    if (oldV.channelID != null && oldV.channelID != "854501438649663498" && oldV.channel.parentID === "853932245482733598") {
         if (client.pvc.get(oldV.channelID) != null && client.pvc.get(oldV.channelID).owner == oldV.member.id) {
             oldV.channel.delete();
             client.pvc.delete(oldV.channelID);
         }
     }
 
-    if (newV.channelID === "853932441684803604") {
+    if (newV.channelID === "854501438649663498") {
         let cleanName = transliterate.slugify(newV.member.user.username);
         if (guild.channels.cache.find(channel => channel.name === `${cleanName}'s Room`)) return
         if (cleanName == '') cleanName = 'unknown';

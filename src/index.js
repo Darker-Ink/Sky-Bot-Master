@@ -46,19 +46,15 @@ event_handler.performEvents(client);
 client.login(process.env.token)
 global.logs = new Discord.WebhookClient(config.logsID, config.logsToken)
 client.on("channelCreate", function(channel){
-    if (channel.name.includes("-ticket")) return
     const embed = new Discord.MessageEmbed()
     logs.send(`channelCreate: ${channel.name}`);
 });
 
 client.on("channelDelete", function(channel){
-    if (channel.name.includes("-ticket")) return
-    const embed = new Discord.MessageEmbed()
     logs.send(`channelDelete: ${channel.name}`);
 });
 
 client.on("channelUpdate", function(oldChannel, newChannel){
-    if (oldChannel.name.includes("-ticket")) return
     if(oldChannel.id == '849427878914424852') return
     if(oldChannel.topic != newChannel.topic){
         const oldtopic = oldChannel.topic;
@@ -323,42 +319,44 @@ client.on("messageReactionAdd", async (reaction, user) => {
 //🤖 📜 📢 🔔
 client.on("messageReactionAdd", async (reaction, user) => {
     if(user.bot) return
-    reaction.users.remove(user)
     const member = await reaction.message.guild.members.fetch(user)
+    if(reaction.message.id == '853182789918785556') {
+    reaction.users.remove(user)
+    }
     //Start Of Ping reaction
     if (member.roles.cache.some(role => role.id === '853182789918785556')) {
         member.roles.remove('853178948639916042')
-        return reaction.message.channel.send('[DEBUG] User already has role and its been removed now')
+        return user.send('You have removed `Ping`')
         }
         if(reaction.emoji.name == "🔔" && reaction.message.id == '853182789918785556') {
             member.roles.add('853178948639916042')
-            return reaction.message.channel.send('[DEBUG] User has gotten the role')
+            return user.send('You have been given `Ping`')
         }
         //End Of ping reaction && Start of Bot update reaction
         if(reaction.emoji.name == "🤖" && reaction.message.id == '853182789918785556') {
             if (member.roles.cache.some(role => role.id === '853178823615709194')) {
                 member.roles.remove('853178823615709194')
-                return reaction.message.channel.send('[DEBUG] User already has role and its been removed now')
+                return user.send('You have removed `Bot Updates`')
                 }
             member.roles.add('853178823615709194')
-            return reaction.message.channel.send('[DEBUG] User has gotten the role')
+            return user.send('You have been given `Bot Updates`')
         }
         //End Of Bot update reaction && Start of change logs reaction
         if(reaction.emoji.name == "📢" && reaction.message.id == '853182789918785556') {
             if (member.roles.cache.some(role => role.id === '853178919057752094')) {
                 member.roles.remove('853178919057752094')
-                return reaction.message.channel.send('[DEBUG] User already has role and its been removed now')
+                return user.send('You have removed `Beta Updates`')
                 }
             member.roles.add('853178919057752094')
-            return reaction.message.channel.send('[DEBUG] User has gotten the role')
+            return user.send('You have been given `Beta Updates`')
         }
         //End Of change logs reaction && Start of Beta Updates reaction
         if(reaction.emoji.name == "📜" && reaction.message.id == '853182789918785556') {
             if (member.roles.cache.some(role => role.id === '853178846157602837')) {
                 member.roles.remove('853178846157602837')
-                return reaction.message.channel.send('[DEBUG] User already has role and its been removed now')
+                return user.send('You have removed `Change Logs`')
                 }
             member.roles.add('853178846157602837')
-            return reaction.message.channel.send('[DEBUG] User has gotten the role')
+            return user.send('You have been given `Change Logs`')
         }
 })
