@@ -4,7 +4,7 @@
   "description": "This is for my discord bot support server",
   "main": "src/index.js",
   "dependencies": {
-    "axios": "^0.21.1",
+    "axios": "^0.21.2",
     "chalk": "^4.1.1",
     "discord.js": "^12.5.3",
     "dotenv": "^10.0.0",
